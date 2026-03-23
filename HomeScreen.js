@@ -420,20 +420,19 @@ function homeLangSelect() {}
 
 /* Called every time home screen opens — show/hide tile, refresh status */
 function homeRefreshJoinClubTile() {
-  var tile = document.getElementById('tileJoinClub');
+  var row  = document.getElementById('joinClubTileRow');
   var sub  = document.getElementById('tileSubJoinClub');
-  if (!tile) return;
+  if (!row) return;
 
   var isViewer = (typeof appMode === 'undefined') || appMode === null || appMode === 'viewer';
-  if (!isViewer) { tile.style.display = 'none'; return; }
+  if (!isViewer) { row.style.display = 'none'; return; }
 
-  tile.style.display = '';
+  row.style.display = '';
 
   // Check status and update sub-text
   var club = (typeof getMyClub === 'function') ? getMyClub() : null;
   if (club && club.id && club.name) {
     if (sub) sub.textContent = '✅ ' + club.name;
-    tile.style.opacity = '1';
     return;
   }
 
@@ -441,7 +440,6 @@ function homeRefreshJoinClubTile() {
   var pending = localStorage.getItem('kbrr_pending_club_name');
   if (pending) {
     if (sub) sub.textContent = '⏳ Pending: ' + pending;
-    tile.style.opacity = '1';
     return;
   }
 
