@@ -95,7 +95,14 @@ async function authSignUp(userId, nickname, email, password) {
     var u = result[0];
     return { user: { id: u.id, userId: u.user_id, nickname: u.nickname, email: u.email } };
   } catch(e) {
-    return { error: e.message || 'Sign up failed. Please try again.' };
+    var msg = e.message || '';
+    if (msg.includes('user_accounts_email_key') || msg.includes('duplicate') && msg.includes('email'))
+      return { error: 'This email is already registered. Please use a different email.' };
+    if (msg.includes('user_accounts_user_id_key') || msg.includes('duplicate') && msg.includes('user_id'))
+      return { error: 'User ID already taken. Please choose another.' };
+    if (msg.includes('duplicate key') || msg.includes('unique constraint'))
+      return { error: 'Account already exists. Please try a different User ID or email.' };
+    return { error: 'Sign up failed. Please try again.' };
   }
 }
 
