@@ -347,24 +347,24 @@ async function authAcceptRequest(requestId, clubId, userAccountId, nickname, gen
       reviewed_at: new Date().toISOString()
     });
 
-    // Add to club_members
-    await sbPost('club_members', {
-      club_id:         clubId,
-      user_account_id: userAccountId,
-      is_active:       true
+    // 1. Create player row
+    var playerRow = await sbPost('players', {
+      name:         nickname,
+      gender:       gender || 'Male',
+      rating:       1.0,
+      club_ratings: {},
+      wins:         0,
+      losses:       0
     });
 
-    // Add to players table
-    await sbPost('players', {
-      user_account_id: userAccountId,
-      club_id:         clubId,
-      name:            nickname,
-      gender:          gender || 'Male',
-      rating:          1.0,
-      club_ratings:    {},
-      wins:            0,
-      losses:          0
-    });
+    // 2. Link player to club via club_members
+    var playerId = playerRow && playerRow[0] && playerRow[0].id;
+    if (playerId) {
+      await sbPost('club_members', {
+        club_id:   clubId,
+        player_id: playerId
+      });
+    }
 
     return { success: true };
   } catch(e) {
