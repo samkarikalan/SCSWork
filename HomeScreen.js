@@ -101,6 +101,7 @@ function showHomeScreen() {
   if (isOrganiser) homeUpdateStepper();
   homeRefreshSummaryTile();
   homeRefreshTiles();
+  homeRefreshJoinClubTile();
   // Init subscription and show trial banner
   if (typeof subInit === 'function') subInit();
   if (typeof subShowTrialBanner === 'function') subShowTrialBanner();
@@ -412,3 +413,242 @@ function homeRefreshSummaryTile() {
 /* Language is now handled in Settings page */
 function homeLangToggle() {}
 function homeLangSelect() {}
+
+/* ══════════════════════════════════════════════
+   JOIN CLUB PAGE — Viewer mode tile & full page
+   ══════════════════════════════════════════════ */
+
+/* Called every time home screen opens — show/hide tile, refresh status */
+function homeRefreshJoinClubTile() {
+  var tile = document.getElementById('tileJoinClub');
+  var sub  = document.getElementById('tileSubJoinClub');
+  if (!tile) return;
+
+  var isViewer = (typeof appMode !== 'undefined') && appMode === 'viewer';
+  if (!isViewer) { tile.style.display = 'none'; return; }
+
+  tile.style.display = '';
+
+  // Check status and update sub-text
+  var club = (typeof getMyClub === 'function') ? getMyClub() : null;
+  if (club && club.id && club.name) {
+    if (sub) sub.textContent = '✅ ' + club.name;
+    tile.style.opacity = '1';
+    return;
+  }
+
+  // Check for pending request
+  var pending = localStorage.getItem('kbrr_pending_club_name');
+  if (pending) {
+    if (sub) sub.textContent = '⏳ Pending: ' + pending;
+    tile.style.opacity = '1';
+    return;
+  }
+
+  if (sub) sub.textContent = 'Find & request';
+}
+
+/* ── Join Club Page — initialise when page opens ── */
+async function joinClubPageOpen() {
+  // Reset search
+  var searchInput = document.getElementById('joinClubPageSearch');
+  if (searchInput) searchInput.value = '';
+  var results = document.getElementById('joinClubPageResults');
+  if (results) { results.style.display = 'none'; results.innerHTML = ''; }
+  var errEl = document.getElementById('joinClubPageError');
+  if (errEl) errEl.style.display = 'none';
+  var fbEl = document.getElementById('joinClubPageFeedback');
+  if (fbEl) fbEl.style.display = 'none';
+
+  var statusCard = document.getElementById('joinClubStatusCard');
+  var searchSection = document.getElementById('joinClubSearchSection');
+
+  // Already a member?
+  var club = (typeof getMyClub === 'function') ? getMyClub() : null;
+  if (club && club.id && club.name) {
+    _joinClubShowStatus('joined', club.name);
+    if (statusCard) statusCard.style.display = '';
+    if (searchSection) searchSection.style.display = 'none';
+    return;
+  }
+
+  // Pending request?
+  var pendingName = localStorage.getItem('kbrr_pending_club_name');
+  var pendingId   = localStorage.getItem('kbrr_pending_club_id');
+  if (pendingId && pendingName) {
+    // Re-check from server in case it was approved
+    try {
+      var user = (typeof authGetUser === 'function') ? authGetUser() : null;
+      if (user) {
+        var rows = await sbGet('club_join_requests',
+          'club_id=eq.' + pendingId + '&user_account_id=eq.' + user.id + '&select=status');
+        if (rows && rows.length) {
+          if (rows[0].status === 'approved') {
+            // Approved — update club
+            setMyClub(pendingId, pendingName);
+            localStorage.removeItem('kbrr_pending_club_id');
+            localStorage.removeItem('kbrr_pending_club_name');
+            _joinClubShowStatus('joined', pendingName);
+            if (statusCard) statusCard.style.display = '';
+            if (searchSection) searchSection.style.display = 'none';
+            homeRefreshJoinClubTile();
+            return;
+          } else if (rows[0].status === 'rejected') {
+            localStorage.removeItem('kbrr_pending_club_id');
+            localStorage.removeItem('kbrr_pending_club_name');
+            // Fall through to search
+          } else {
+            _joinClubShowStatus('pending', pendingName);
+            if (statusCard) statusCard.style.display = '';
+            if (searchSection) searchSection.style.display = 'none';
+            return;
+          }
+        }
+      }
+    } catch(e) {
+      // Offline — show cached pending state
+      _joinClubShowStatus('pending', pendingName);
+      if (statusCard) statusCard.style.display = '';
+      if (searchSection) searchSection.style.display = 'none';
+      return;
+    }
+  }
+
+  // No club — show search
+  if (statusCard) statusCard.style.display = 'none';
+  if (searchSection) searchSection.style.display = '';
+}
+
+function _joinClubShowStatus(state, clubName) {
+  var icon  = document.getElementById('joinClubStatusIcon');
+  var title = document.getElementById('joinClubStatusTitle');
+  var msg   = document.getElementById('joinClubStatusMsg');
+  var leave = document.getElementById('joinClubLeaveBtn');
+  var card  = document.getElementById('joinClubStatusCard');
+
+  if (state === 'joined') {
+    if (icon)  icon.textContent  = '✅';
+    if (title) title.textContent = 'Joined: ' + clubName;
+    if (msg)   msg.textContent   = 'You are a member of this club. Switch to Organiser mode to manage sessions.';
+    if (leave) leave.style.display = '';
+    if (card)  card.style.borderColor = '#2dce89';
+  } else if (state === 'pending') {
+    if (icon)  icon.textContent  = '⏳';
+    if (title) title.textContent = 'Request Pending';
+    if (msg)   msg.textContent   = 'Your request to join "' + clubName + '" is awaiting admin approval. Check back soon.';
+    if (leave) leave.style.display = '';
+    if (card)  card.style.borderColor = '#e6a817';
+  }
+}
+
+/* ── Search clubs as user types ── */
+var _joinClubSearchTimer = null;
+function joinClubPageSearchUI(query) {
+  clearTimeout(_joinClubSearchTimer);
+  var errEl = document.getElementById('joinClubPageError');
+  if (errEl) errEl.style.display = 'none';
+  var fbEl = document.getElementById('joinClubPageFeedback');
+  if (fbEl) fbEl.style.display = 'none';
+
+  if (!query || query.trim().length < 2) {
+    var r = document.getElementById('joinClubPageResults');
+    if (r) { r.style.display = 'none'; r.innerHTML = ''; }
+    return;
+  }
+  _joinClubSearchTimer = setTimeout(function() { _joinClubDoSearch(query); }, 350);
+}
+
+async function _joinClubDoSearch(query) {
+  var resultsEl = document.getElementById('joinClubPageResults');
+  var errEl     = document.getElementById('joinClubPageError');
+  if (!resultsEl) return;
+
+  resultsEl.innerHTML = '<div style="padding:12px;text-align:center;color:var(--muted);font-size:0.85rem;">Searching...</div>';
+  resultsEl.style.display = '';
+
+  var result = (typeof authSearchClubs === 'function') ? await authSearchClubs(query) : { clubs: [] };
+
+  if (result.error) {
+    resultsEl.style.display = 'none';
+    if (errEl) { errEl.textContent = result.error; errEl.style.display = ''; }
+    return;
+  }
+
+  var clubs = result.clubs || [];
+  if (!clubs.length) {
+    resultsEl.innerHTML = '<div style="padding:14px;text-align:center;color:var(--muted);font-size:0.85rem;">No clubs found for "' + query + '"</div>';
+    return;
+  }
+
+  resultsEl.innerHTML = clubs.map(function(c) {
+    return '<div onclick="joinClubPageRequest(\'' + c.id + '\',\'' + c.name.replace(/'/g, "\\'") + '\')" style="padding:14px 16px;cursor:pointer;border-bottom:1px solid var(--border,#333);display:flex;align-items:center;justify-content:space-between;background:var(--card-bg,#1e1e2e);border-radius:12px;margin-bottom:6px;">' +
+      '<div><div style="font-weight:600;color:var(--text);">' + c.name + '</div></div>' +
+      '<span style="color:var(--accent,#6c63ff);font-size:0.82rem;font-weight:600;">Request ›</span>' +
+    '</div>';
+  }).join('');
+}
+
+async function joinClubPageRequest(clubId, clubName) {
+  var fbEl      = document.getElementById('joinClubPageFeedback');
+  var fbIcon    = document.getElementById('joinClubPageFeedbackIcon');
+  var fbTitle   = document.getElementById('joinClubPageFeedbackTitle');
+  var fbMsg     = document.getElementById('joinClubPageFeedbackMsg');
+  var resultsEl = document.getElementById('joinClubPageResults');
+  var errEl     = document.getElementById('joinClubPageError');
+
+  if (errEl) errEl.style.display = 'none';
+
+  // Show loading
+  if (fbEl) {
+    if (fbIcon)  fbIcon.textContent  = '⏳';
+    if (fbTitle) fbTitle.textContent = 'Sending request...';
+    if (fbMsg)   fbMsg.textContent   = '';
+    fbEl.style.display = '';
+  }
+  if (resultsEl) resultsEl.style.display = 'none';
+
+  var result = (typeof authRequestJoin === 'function') ? await authRequestJoin(clubId) : { error: 'Not available' };
+
+  if (result.alreadyMember) {
+    _joinClubShowStatus('joined', clubName);
+    document.getElementById('joinClubStatusCard').style.display = '';
+    document.getElementById('joinClubSearchSection').style.display = 'none';
+    if (fbEl) fbEl.style.display = 'none';
+    homeRefreshJoinClubTile();
+    return;
+  }
+
+  if (result.pending || result.success) {
+    // Save pending state locally
+    localStorage.setItem('kbrr_pending_club_id',   clubId);
+    localStorage.setItem('kbrr_pending_club_name', clubName);
+
+    if (fbIcon)  fbIcon.textContent  = '⏳';
+    if (fbTitle) fbTitle.textContent = 'Request Sent!';
+    if (fbMsg)   fbMsg.textContent   = 'Waiting for admin approval for "' + clubName + '". Check back here to see when you\'re approved.';
+    homeRefreshJoinClubTile();
+    return;
+  }
+
+  if (result.error) {
+    if (fbEl) fbEl.style.display = 'none';
+    if (resultsEl) resultsEl.style.display = '';
+    if (errEl) { errEl.textContent = result.error; errEl.style.display = ''; }
+  }
+}
+
+/* ── Leave club ── */
+function joinClubLeave() {
+  if (!confirm('Leave this club?')) return;
+  localStorage.removeItem('kbrr_pending_club_id');
+  localStorage.removeItem('kbrr_pending_club_name');
+  if (typeof clearMyClub === 'function') clearMyClub();
+  else {
+    localStorage.removeItem('kbrr_my_club_id');
+    localStorage.removeItem('kbrr_my_club_name');
+  }
+  // Reset page view
+  document.getElementById('joinClubStatusCard').style.display = 'none';
+  document.getElementById('joinClubSearchSection').style.display = '';
+  homeRefreshJoinClubTile();
+}

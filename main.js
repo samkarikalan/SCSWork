@@ -495,6 +495,10 @@ function showPage(pageID, el) {
     if (typeof renderMyCard === 'function') renderMyCard();
   }
 
+  if (pageID === "joinClubPage") {
+    if (typeof joinClubPageOpen === 'function') joinClubPageOpen();
+  }
+
   if (pageID === "helpPage") {
     if (typeof onHelpTabOpen === "function") onHelpTabOpen();
   }

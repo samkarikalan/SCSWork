@@ -332,6 +332,13 @@
         <div class="home-tile-sub" id="tileSubSettings">Theme · Font</div>
       </div>
 
+      <!-- Join Club tile — viewer mode only -->
+      <div class="home-tile home-tile-viewer" id="tileJoinClub" onclick="homeGo('joinClubPage',null)" style="display:none;">
+        <div class="home-tile-icon">🏢</div>
+        <div class="home-tile-name">Join Club</div>
+        <div class="home-tile-sub" id="tileSubJoinClub">Find &amp; request</div>
+      </div>
+
     </div>
 
     <button class="home-help-btn" onclick="homeGo('helpPage',null)">❓ Help &amp; Guide</button>
@@ -361,6 +368,43 @@
   <span id="tabBtnSummary"   style="display:none"></span>
   <span id="tabBtnDashboard" style="display:none"></span>
   <span id="tabBtnViewer"    style="display:none"></span>
+  <span id="tabBtnJoinClub"  style="display:none"></span>
+
+  <!-- ============================= -->
+  <!--        JOIN CLUB PAGE         -->
+  <!-- ============================= -->
+  <div id="joinClubPage" class="page" style="display:none;">
+    <div class="page-back-bar">
+      <button class="page-back-btn" onclick="showHomeScreen()">‹ Home</button>
+      <span class="page-back-title">🏢 Join Club</span>
+    </div>
+
+    <!-- Status card — shown when already joined or pending -->
+    <div id="joinClubStatusCard" style="display:none; margin:16px; padding:20px; border-radius:16px; background:var(--card-bg,#1e1e2e); border:1px solid var(--border,#333); text-align:center;">
+      <div id="joinClubStatusIcon" style="font-size:2.5rem; margin-bottom:10px;">⏳</div>
+      <div id="joinClubStatusTitle" style="font-weight:700; font-size:1.05rem; color:var(--text); margin-bottom:6px;"></div>
+      <div id="joinClubStatusMsg" style="font-size:0.82rem; color:var(--muted); line-height:1.5;"></div>
+      <button id="joinClubLeaveBtn" onclick="joinClubLeave()" style="display:none; margin-top:16px; background:none; border:1px solid var(--red,#e63757); color:var(--red,#e63757); border-radius:10px; padding:8px 20px; font-size:0.82rem; cursor:pointer;">Leave Club</button>
+    </div>
+
+    <!-- Search section -->
+    <div id="joinClubSearchSection" style="margin:16px;">
+      <div style="position:relative; margin-bottom:10px;">
+        <input type="text" id="joinClubPageSearch" class="auth-input"
+          placeholder="Type club name to search..."
+          oninput="joinClubPageSearchUI(this.value)"
+          style="width:100%; box-sizing:border-box; padding-right:40px;">
+        <span style="position:absolute; right:14px; top:50%; transform:translateY(-50%); color:var(--muted); pointer-events:none;">🔍</span>
+      </div>
+      <div id="joinClubPageResults" style="display:none;"></div>
+      <div id="joinClubPageError" class="auth-error" style="display:none;"></div>
+      <div id="joinClubPageFeedback" style="display:none; text-align:center; padding:20px 12px; border-radius:14px; background:var(--card-bg,#1e1e2e); border:1px solid var(--border,#333); margin-top:10px;">
+        <div id="joinClubPageFeedbackIcon" style="font-size:2rem; margin-bottom:8px;">⏳</div>
+        <div id="joinClubPageFeedbackTitle" style="font-weight:600; color:var(--text); margin-bottom:4px;"></div>
+        <div id="joinClubPageFeedbackMsg" style="font-size:0.82rem; color:var(--muted);"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- ============================= -->
   <!--         SETTINGS PAGE         -->
