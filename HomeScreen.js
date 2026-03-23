@@ -661,7 +661,7 @@ async function joinClubPageRequest(clubId, clubName, customNickname) {
     localStorage.setItem('kbrr_pending_club_name', clubName);
     if (fbIcon)  fbIcon.textContent  = '⏳';
     if (fbTitle) fbTitle.textContent = 'Request Sent!';
-    if (fbMsg)   fbMsg.textContent   = 'Waiting for admin approval for "' + clubName + '". Check back here to see when you're approved.';
+    if (fbMsg)   fbMsg.textContent   = 'Waiting for admin approval for "' + clubName + '". Check back here to see when you\'re approved.';
     homeRefreshJoinClubTile();
     return;
   }
