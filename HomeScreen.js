@@ -424,7 +424,7 @@ function homeRefreshJoinClubTile() {
   var sub  = document.getElementById('tileSubJoinClub');
   if (!tile) return;
 
-  var isViewer = (typeof appMode !== 'undefined') && appMode === 'viewer';
+  var isViewer = (typeof appMode === 'undefined') || appMode === null || appMode === 'viewer';
   if (!isViewer) { tile.style.display = 'none'; return; }
 
   tile.style.display = '';

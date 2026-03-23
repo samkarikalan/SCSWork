@@ -142,8 +142,15 @@ async function initAppFlow() {
 
   // ── Step 2: Check club ──
   var club = (typeof getMyClub === 'function') ? getMyClub() : { id: null };
+  var savedMode = sessionStorage.getItem('appMode') || 'viewer';
+
   if (!club || !club.id) {
-    // Check for pending invite from link
+    // Viewer without a club — go to home so they can use the Join Club tile
+    if (savedMode === 'viewer') {
+      selectMode('viewer');
+      return;
+    }
+    // Organiser without a club — check for pending invite then show join screen
     var pending = (typeof authGetPendingInvite === 'function') ? authGetPendingInvite() : null;
     if (pending) {
       var joinInput = document.getElementById('joinClubCode');
@@ -163,7 +170,7 @@ async function initAppFlow() {
   } catch(e) {}
 
   // ── All good — show mode select then home ──
-  selectMode(sessionStorage.getItem('appMode') || 'viewer');
+  selectMode(savedMode);
 }
 
 function showOnboardingOverlay(reason) {
