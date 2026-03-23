@@ -291,9 +291,10 @@ async function playerPlayingRenderList() {
         container.innerHTML = '<p class="player-mgmt-empty">No players currently locked.</p>';
         return;
       }
-      const idList = '(' + members.map(m => m.player_id).join(',') + ')';
+      // members IS the players array already — filter directly
+      rows = members.filter(m => m.is_playing);
       rows = await sbGet('players',
-        `id=in.${idList}&is_playing=eq.true&select=name,gender,session_id,session_started_at&order=name.asc`
+        `club_id=eq.${club.id}&is_playing=eq.true&select=nickname,gender,session_id,session_started_at&order=nickname.asc`
       );
     } else {
       // No club logged in — show nothing
@@ -366,7 +367,7 @@ async function playerPlayingRenderList() {
 async function playerPlayingRelease(name) {
   if (!confirm('Release "' + name + '" from active session?')) return;
   try {
-    await sbPatch('players', 'name=ilike.' + encodeURIComponent(name), {
+    await sbPatch('players', `club_id=eq.${(getMyClub&&getMyClub()||{}).id||''}&nickname=ilike.` + encodeURIComponent(name), {
       is_playing: false, session_id: null, session_started_at: null
     });
     playerPlayingRenderList();
@@ -380,7 +381,7 @@ async function playerPlayingReleaseAll() {
     if (!club.id) { alert('No club logged in.'); return; }
     const members = await sbGet('players', `club_id=eq.${club.id}&select=id,nickname,gender,rating,club_rating,wins,losses`);
     if (!members || !members.length) return;
-    const idList = '(' + members.map(m => m.player_id).join(',') + ')';
+    const idList = '(' + members.map(m => `"${m.id}"`).join(',') + ')';
     await sbPatch('players', `id=in.${idList}&is_playing=eq.true`, {
       is_playing: false, session_id: null, session_started_at: null
     });
@@ -448,7 +449,7 @@ async function playerMgmtToggleGender(displayName) {
   localStorage.setItem("newImportHistory", JSON.stringify(newImportState.historyPlayers));
   // Sync gender to Supabase
   try {
-    await sbPatch("players", `name=ilike.${encodeURIComponent(displayName.trim())}`, { gender: hp.gender });
+    await sbPatch("players", `club_id=eq.${(getMyClub&&getMyClub()||{}).id||""}&nickname=ilike.${encodeURIComponent(displayName.trim())}`, { gender: hp.gender });
   } catch(e) { /* silent */ }
   syncPlayersFromMaster();
   updatePlayerList();
@@ -462,9 +463,9 @@ async function playerMgmtDelete(displayName) {
 
   // Remove from Supabase club_members
   try {
-    const players = await sbGet("players", `name=ilike.${encodeURIComponent(displayName.trim())}&select=id`);
+    const club = getMyClub();
+    const players = await sbGet("players", `club_id=eq.${club.id}&nickname=ilike.${encodeURIComponent(displayName.trim())}&select=id`);
     if (players.length) {
-      const club = getMyClub();
       await sbDelete("players", `id=eq.${players[0].id}&club_id=eq.${club.id}`);
     }
   } catch(e) { /* silent */ }
@@ -654,7 +655,8 @@ async function vaultEditName(displayName) {
   );
   if (dup) { alert('Name already exists!'); return; }
   try {
-    await sbPatch('players', `name=ilike.${encodeURIComponent(displayName.trim())}`, { name: trimmed });
+    const club = getMyClub();
+    await sbPatch('players', `club_id=eq.${club.id}&nickname=ilike.${encodeURIComponent(displayName.trim())}`, { nickname: trimmed });
     const hp = (newImportState.historyPlayers || []).find(
       p => p.displayName.trim().toLowerCase() === displayName.trim().toLowerCase()
     );
@@ -675,7 +677,8 @@ async function vaultToggleGender(displayName, imgEl) {
   imgEl.src = hp.gender === 'Female' ? 'female.png' : 'male.png';
   localStorage.setItem('newImportHistory', JSON.stringify(newImportState.historyPlayers));
   try {
-    await sbPatch('players', `name=ilike.${encodeURIComponent(displayName.trim())}`, { gender: hp.gender });
+    const club2 = getMyClub();
+    await sbPatch('players', `club_id=eq.${club2.id}&nickname=ilike.${encodeURIComponent(displayName.trim())}`, { gender: hp.gender });
     syncPlayersFromMaster();
     updatePlayerList();
   } catch(e) { /* silent — local already updated */ }

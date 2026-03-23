@@ -264,7 +264,7 @@ async function confirmPinSetup(name) {
 
   err.textContent = '⏳ Saving...';
   try {
-    await sbPatch('players', `name=ilike.${encodeURIComponent(name)}`, {
+    await sbPatch('players', `club_id=eq.${(getMyClub&&getMyClub()||{}).id||''}&nickname=ilike.${encodeURIComponent(name)}`, {
       pin, recovery_word: recovery
     });
     const p = _pickerAllPlayers.find(x => x.name === name);
@@ -337,7 +337,7 @@ async function confirmPinRecovery(name) {
 
   err.textContent = '⏳ Saving...';
   try {
-    await sbPatch('players', `name=ilike.${encodeURIComponent(name)}`, { pin: newPin });
+    await sbPatch('players', `club_id=eq.${(getMyClub&&getMyClub()||{}).id||''}&nickname=ilike.${encodeURIComponent(name)}`, { pin: newPin });
     p.pin = newPin;
     err.textContent = '';
     _completeProfileSelection(name);
@@ -415,7 +415,7 @@ async function showProfileCard(player) {
   document.getElementById('pcLosses').textContent = '…';
   try {
     const playerRows = await sbGet('players',
-      `name=ilike.${encodeURIComponent(player.name)}&select=wins,losses`);
+      `club_id=eq.${(getMyClub&&getMyClub()||{}).id||''}&nickname=ilike.${encodeURIComponent(player.name)}&select=wins,losses`);
     if (playerRows && playerRows.length) {
       document.getElementById('pcWins').textContent   = (playerRows[0].wins   || 0);
       document.getElementById('pcLosses').textContent = (playerRows[0].losses || 0);
@@ -529,7 +529,7 @@ async function renderMyCard() {
     const today = new Date().toISOString().split('T')[0];
 
     const [playerRows, liveRows] = await Promise.all([
-      sbGet('players', `name=ilike.${encodeURIComponent(player.name)}&select=wins,losses,sessions`),
+      sbGet('players', `club_id=eq.${(getMyClub&&getMyClub()||{}).id||''}&nickname=ilike.${encodeURIComponent(player.name)}&select=wins,losses,sessions`),
       club.id
         ? sbGet('live_sessions',
             `player_name=ilike.${encodeURIComponent(player.name)}&club_id=eq.${club.id}&date=eq.${today}`)
