@@ -160,16 +160,18 @@ async function initAppFlow() {
     return;
   }
 
-  // ── Step 3: Check players ──
-  try {
-    var players = await dbGetPlayers(true);
-    if (!players || players.length === 0) {
-      showOnboardingOverlay('noPlayers');
-      return;
-    }
-  } catch(e) {}
+  // ── Step 3: Check players (organiser only) ──
+  if (savedMode === 'organiser') {
+    try {
+      var players = await dbGetPlayers(true);
+      if (!players || players.length === 0) {
+        showOnboardingOverlay('noPlayers');
+        return;
+      }
+    } catch(e) {}
+  }
 
-  // ── All good — show mode select then home ──
+  // ── All good — show home ──
   selectMode(savedMode);
 }
 
