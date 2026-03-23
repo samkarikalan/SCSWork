@@ -349,6 +349,10 @@ async function vaultAcceptRequest(requestId, userAccountId, nickname) {
     return;
   }
   // Refresh list
+  // Invalidate player cache and resync so organiser sees the new player immediately
+  localStorage.removeItem('kbrr_cache_players');
+  localStorage.removeItem('kbrr_cache_ts');
+  if (typeof syncToLocal === 'function') await syncToLocal();
   vaultLoadRequests();
   // Refresh players tile on home
   if (typeof homeRefreshTiles === 'function') homeRefreshTiles();

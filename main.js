@@ -606,18 +606,15 @@ async function syncToLocal() {
       return;
     }
 
-    // kbrr_rating_field set at login — single decision point for READ
-    const ratingField = localStorage.getItem("kbrr_rating_field") || "club_ratings";
+    // Always use clubRating (club_rating column) as the active rating
     const synced = players.map(gp => {
-      const activeRating = ratingField === "club_ratings"
-        ? (parseFloat(gp.clubRating) || 1.0)
-        : (parseFloat(gp.rating)     || 1.0);
+      const activeRating = parseFloat(gp.clubRating) || parseFloat(gp.rating) || 1.0;
       return {
         displayName:  gp.name.trim(),
         gender:       gp.gender || "Male",
-        rating:       parseFloat(gp.rating)     || 1.0,  // raw global — for profile display only
-        clubRating:   parseFloat(gp.clubRating) || 1.0,  // raw club   — for profile display only
-        activeRating,                                     // what everything else reads
+        rating:       parseFloat(gp.rating)     || 1.0,
+        clubRating:   parseFloat(gp.clubRating) || 1.0,
+        activeRating,
         id:           gp.id
       };
     });

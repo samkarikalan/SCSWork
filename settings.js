@@ -286,7 +286,7 @@ async function playerPlayingRenderList() {
     let rows;
     if (club.id) {
       // Get only players belonging to this club
-      const members = await sbGet('club_members', `club_id=eq.${club.id}&select=player_id`);
+      const members = await sbGet('players', `club_id=eq.${club.id}&select=id,nickname,gender,rating,club_rating,wins,losses`);
       if (!members || !members.length) {
         container.innerHTML = '<p class="player-mgmt-empty">No players currently locked.</p>';
         return;
@@ -378,7 +378,7 @@ async function playerPlayingReleaseAll() {
   try {
     const club = (typeof getMyClub === 'function') ? getMyClub() : { id: null };
     if (!club.id) { alert('No club logged in.'); return; }
-    const members = await sbGet('club_members', `club_id=eq.${club.id}&select=player_id`);
+    const members = await sbGet('players', `club_id=eq.${club.id}&select=id,nickname,gender,rating,club_rating,wins,losses`);
     if (!members || !members.length) return;
     const idList = '(' + members.map(m => m.player_id).join(',') + ')';
     await sbPatch('players', `id=in.${idList}&is_playing=eq.true`, {
@@ -465,7 +465,7 @@ async function playerMgmtDelete(displayName) {
     const players = await sbGet("players", `name=ilike.${encodeURIComponent(displayName.trim())}&select=id`);
     if (players.length) {
       const club = getMyClub();
-      await sbDelete("club_members", `player_id=eq.${players[0].id}&club_id=eq.${club.id}`);
+      await sbDelete("players", `id=eq.${players[0].id}&club_id=eq.${club.id}`);
     }
   } catch(e) { /* silent */ }
 
@@ -687,7 +687,7 @@ async function vaultDeletePlayer(displayName) {
     const players = await sbGet('players', `name=ilike.${encodeURIComponent(displayName.trim())}&select=id`);
     if (players.length) {
       const club = getMyClub();
-      await sbDelete('club_members', `player_id=eq.${players[0].id}&club_id=eq.${club.id}`);
+      await sbDelete('players', `id=eq.${players[0].id}&club_id=eq.${club.id}`);
     }
   } catch(e) { /* silent */ }
   newImportState.historyPlayers = (newImportState.historyPlayers || []).filter(
@@ -768,7 +768,7 @@ async function clubCreateVerify() {
     const club = await dbAddClub(name, selPw, adminPw, _clubCreateEmail);
     setMyClub(club.id, club.name);
     localStorage.setItem('kbrr_club_mode',    'admin');
-    localStorage.setItem('kbrr_rating_field', 'club_ratings');
+    localStorage.setItem('kbrr_rating_field', 'club_rating');
     // Reset form
     ['sbNewClubName','sbNewClubEmail','sbNewClubSelectPw','sbNewClubAdminPw','sbNewClubOtp'].forEach(id => {
       const el = document.getElementById(id); if (el) el.value = '';

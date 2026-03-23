@@ -162,12 +162,12 @@ function showProfilePicker() {
   if (searchEl) searchEl.value = '';
 
   // Load ALL players from server (no club filter)
-  sbGet('players', 'order=name.asc&select=id,name,gender,rating,club_ratings,pin,recovery_word').then(players => {
+  sbGet('players', `club_id=eq.${(getMyClub&&getMyClub()||{}).id||''}&order=nickname.asc&select=id,nickname,gender,rating,club_rating`).then(players => {
     _pickerAllPlayers = (players || []).map(p => ({
-      name:          p.name,
+      name:          p.nickname,
       gender:        p.gender || 'Male',
       rating:        p.rating || 1.0,
-      club_ratings:  p.club_ratings || {},
+      club_rating:   parseFloat(p.club_rating) || 1.0,
       pin:           p.pin || null,
       recovery_word: p.recovery_word || null
     }));

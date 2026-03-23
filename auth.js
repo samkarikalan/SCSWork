@@ -228,7 +228,7 @@ async function authJoinClub(inviteCode) {
     if (!clubRows || !clubRows.length) return { error: 'Invalid invite code.' };
     var club = clubRows[0];
 
-    await sbPost('club_members', { club_id: club.id, user_account_id: user.id });
+    // Club membership is tracked via players.club_id — no separate club_members insert needed
     setMyClub(club.id, club.name);
     return { success: true, club: { id: club.id, name: club.name } };
   } catch(e) {
@@ -277,8 +277,8 @@ async function authRequestJoin(clubId) {
 
   try {
     // Check if already a member
-    var members = await sbGet('club_members',
-      'club_id=eq.' + clubId + '&user_account_id=eq.' + user.id);
+    var members = await sbGet('players',
+      'club_id=eq.' + clubId + '&user_account_id=eq.' + user.id + '&select=id');
     if (members && members.length) {
       // Already member — just set club
       var club = await sbGet('clubs', 'id=eq.' + clubId + '&select=id,name');
@@ -347,24 +347,17 @@ async function authAcceptRequest(requestId, clubId, userAccountId, nickname, gen
       reviewed_at: new Date().toISOString()
     });
 
-    // 1. Create player row
-    var playerRow = await sbPost('players', {
-      name:         nickname,
-      gender:       gender || 'Male',
-      rating:       1.0,
-      club_ratings: {},
-      wins:         0,
-      losses:       0
+    // Create player row with club_id and user_account_id
+    await sbPost('players', {
+      club_id:         clubId,
+      user_account_id: userAccountId,
+      nickname:        nickname,
+      gender:          gender || 'Male',
+      rating:          1.0,
+      club_rating:     1.0,
+      wins:            0,
+      losses:          0
     });
-
-    // 2. Link player to club via club_members
-    var playerId = playerRow && playerRow[0] && playerRow[0].id;
-    if (playerId) {
-      await sbPost('club_members', {
-        club_id:   clubId,
-        player_id: playerId
-      });
-    }
 
     return { success: true };
   } catch(e) {
