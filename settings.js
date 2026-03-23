@@ -684,12 +684,15 @@ async function vaultToggleGender(displayName, imgEl) {
 async function vaultDeletePlayer(displayName) {
   if (!confirm(`Remove "${displayName}" from this club?`)) return;
   try {
-    const players = await sbGet('players', `name=ilike.${encodeURIComponent(displayName.trim())}&select=id`);
-    if (players.length) {
-      const club = getMyClub();
-      await sbDelete('players', `id=eq.${players[0].id}&club_id=eq.${club.id}`);
-    }
-  } catch(e) { /* silent */ }
+    const club = getMyClub();
+    if (!club || !club.id) throw new Error('No club selected');
+    const players = await sbGet('players', `club_id=eq.${club.id}&nickname=ilike.${encodeURIComponent(displayName.trim())}&select=id`);
+    if (!players.length) throw new Error('Player not found');
+    await sbDelete('players', `id=eq.${players[0].id}&club_id=eq.${club.id}`);
+  } catch(e) {
+    alert('Failed to remove player: ' + e.message);
+    return;
+  }
   newImportState.historyPlayers = (newImportState.historyPlayers || []).filter(
     p => p.displayName.trim().toLowerCase() !== displayName.trim().toLowerCase()
   );

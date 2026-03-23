@@ -490,15 +490,24 @@ async function joinClubPageOpen() {
           'club_id=eq.' + pendingId + '&user_account_id=eq.' + user.id + '&select=status');
         if (rows && rows.length) {
           if (rows[0].status === 'accepted') {
-            // Approved — update club
-            setMyClub(pendingId, pendingName);
-            localStorage.removeItem('kbrr_pending_club_id');
-            localStorage.removeItem('kbrr_pending_club_name');
-            _joinClubShowStatus('joined', pendingName);
-            if (statusCard) statusCard.style.display = '';
-            if (searchSection) searchSection.style.display = 'none';
-            homeRefreshJoinClubTile();
-            return;
+            // Verify player row still exists (not left/deleted)
+            var playerCheck = await sbGet('players',
+              'club_id=eq.' + pendingId + '&user_account_id=eq.' + user.id + '&select=id');
+            if (!playerCheck || !playerCheck.length) {
+              // Player row gone — treat as not a member
+              localStorage.removeItem('kbrr_pending_club_id');
+              localStorage.removeItem('kbrr_pending_club_name');
+              // Fall through to search
+            } else {
+              setMyClub(pendingId, pendingName);
+              localStorage.removeItem('kbrr_pending_club_id');
+              localStorage.removeItem('kbrr_pending_club_name');
+              _joinClubShowStatus('joined', pendingName);
+              if (statusCard) statusCard.style.display = '';
+              if (searchSection) searchSection.style.display = 'none';
+              homeRefreshJoinClubTile();
+              return;
+            }
           } else if (rows[0].status === 'rejected') {
             localStorage.removeItem('kbrr_pending_club_id');
             localStorage.removeItem('kbrr_pending_club_name');
@@ -677,15 +686,37 @@ function joinClubSubmitNickname() {
 }
 
 /* ── Leave club ── */
-function joinClubLeave() {
+async function joinClubLeave() {
   if (!confirm('Leave this club?')) return;
+
+  var pendingClubId = localStorage.getItem('kbrr_pending_club_id');
+  var myClub = (typeof getMyClub === 'function') ? getMyClub() : null;
+  var clubId = (myClub && myClub.id) || pendingClubId;
+  var user   = (typeof authGetUser === 'function') ? authGetUser() : null;
+
+  // Delete from DB: player row and join request
+  if (clubId && user) {
+    try {
+      // Delete player row for this user in this club
+      await sbDelete('players', 'club_id=eq.' + clubId + '&user_account_id=eq.' + user.id);
+    } catch(e) { /* silent */ }
+    try {
+      // Delete join request so it doesn't restore on next login
+      await sbDelete('club_join_requests', 'club_id=eq.' + clubId + '&user_account_id=eq.' + user.id);
+    } catch(e) { /* silent */ }
+  }
+
+  // Clear localStorage
   localStorage.removeItem('kbrr_pending_club_id');
   localStorage.removeItem('kbrr_pending_club_name');
+  localStorage.removeItem('kbrr_cache_players');
+  localStorage.removeItem('kbrr_cache_ts');
   if (typeof clearMyClub === 'function') clearMyClub();
   else {
     localStorage.removeItem('kbrr_my_club_id');
     localStorage.removeItem('kbrr_my_club_name');
   }
+
   // Reset page view
   document.getElementById('joinClubStatusCard').style.display = 'none';
   document.getElementById('joinClubSearchSection').style.display = '';
