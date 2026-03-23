@@ -87,16 +87,16 @@ function showHomeScreen() {
     if (statusBar)  statusBar.classList.add('disconnected');
   }
 
-  // Show correct flow
-  var orgFlow  = document.getElementById('homeOrganizerFlow');
-  var viewFlow = document.getElementById('homeViewerFlow');
-  if (orgFlow)  orgFlow.style.display  = isOrganiser ? '' : 'none';
-  if (viewFlow) viewFlow.style.display = isOrganiser ? 'none' : '';
+  // Show correct flow and grids
+  var orgFlow    = document.getElementById('homeOrganizerFlow');
+  var viewFlow   = document.getElementById('homeViewerFlow');
+  var orgGrid    = document.getElementById('homeOrgGrid');
+  var viewerGrid = document.getElementById('homeViewerGrid');
 
-  // Viewer: hide Vault tile
-  document.querySelectorAll('.home-tile-org').forEach(function(t) {
-    t.style.display = isOrganiser ? '' : 'none';
-  });
+  if (orgFlow)    orgFlow.style.display    = isOrganiser ? '' : 'none';
+  if (viewFlow)   viewFlow.style.display   = isOrganiser ? 'none' : '';
+  if (orgGrid)    orgGrid.style.display    = isOrganiser ? '' : 'none';
+  if (viewerGrid) viewerGrid.style.display = isOrganiser ? 'none' : '';
 
   if (isOrganiser) homeUpdateStepper();
   homeRefreshSummaryTile();
@@ -149,54 +149,72 @@ async function homeRefreshTiles() {
 
   // ── Settings ──
   var settingsSub = document.getElementById('tileSubSettings');
-  if (settingsSub) {
+  var settingsSubV = document.getElementById('tileSubSettingsV');
+  var settingsText = '';
+  if (settingsSub || settingsSubV) {
     var theme    = localStorage.getItem('app-theme')    || 'dark';
     var fontSize = localStorage.getItem('appFontSize')  || 'medium';
-    settingsSub.textContent = (theme.charAt(0).toUpperCase() + theme.slice(1))
+    settingsText = (theme.charAt(0).toUpperCase() + theme.slice(1))
       + ' · ' + (fontSize.charAt(0).toUpperCase() + fontSize.slice(1));
+    if (settingsSub)  settingsSub.textContent  = settingsText;
+    if (settingsSubV) settingsSubV.textContent = settingsText;
   }
 
-  // ── My Card tile ──
-  var tileRating = document.getElementById('homeTileRating');
-  var tileName   = document.getElementById('homeTileName');
-  var tileAvatar = document.getElementById('homeTileAvatar');
-  var tileIcon   = document.getElementById('homeTileIcon');
+  // ── My Card tile (both grids) ──
+  var tileRating  = document.getElementById('homeTileRating');
+  var tileName    = document.getElementById('homeTileName');
+  var tileAvatar  = document.getElementById('homeTileAvatar');
+  var tileIcon    = document.getElementById('homeTileIcon');
+  var tileRatingV = document.getElementById('homeTileRatingV');
+  var tileNameV   = document.getElementById('homeTileNameV');
+  var tileAvatarV = document.getElementById('homeTileAvatarV');
+  var tileIconV   = document.getElementById('homeTileIconV');
   var player = (typeof getMyPlayer === 'function') ? getMyPlayer() : null;
-  if (player) {
-    if (tileName)   tileName.textContent = player.name;
-    if (tileAvatar) { tileAvatar.src = player.gender === 'Female' ? 'female.png' : 'male.png'; tileAvatar.style.display = 'block'; }
-    if (tileIcon)   tileIcon.style.display = 'none';
-    if (tileRating) tileRating.textContent = 'Loading...';
-    // Async: fetch club rating
-    try {
-      var master = JSON.parse(localStorage.getItem('newImportHistory') || '[]');
-      var hp = master.find(function(h) {
-        return h.displayName && h.displayName.trim().toLowerCase() === player.name.trim().toLowerCase();
-      });
-      var clubRating = parseFloat(hp && hp.clubRating) || 1.0;
-      if (tileRating) tileRating.textContent = 'Club ' + clubRating.toFixed(1);
-    } catch(e) {
-      if (tileRating) tileRating.textContent = 'Tap to view';
+
+  function _setMyCardTile(name, avatar, icon, rating, p) {
+    if (!name) return;
+    if (p) {
+      if (name)   name.textContent = p.name;
+      if (avatar) { avatar.src = p.gender === 'Female' ? 'female.png' : 'male.png'; avatar.style.display = 'block'; }
+      if (icon)   icon.style.display = 'none';
+      if (rating) rating.textContent = 'Loading...';
+      try {
+        var master = JSON.parse(localStorage.getItem('newImportHistory') || '[]');
+        var hp = master.find(function(h) {
+          return h.displayName && h.displayName.trim().toLowerCase() === p.name.trim().toLowerCase();
+        });
+        var clubRating = parseFloat(hp && hp.clubRating) || 1.0;
+        if (rating) rating.textContent = 'Club ' + clubRating.toFixed(1);
+      } catch(e) {
+        if (rating) rating.textContent = 'Tap to view';
+      }
+    } else {
+      if (name)   name.textContent = 'My Card';
+      if (avatar) avatar.style.display = 'none';
+      if (icon)   { icon.style.display = ''; icon.textContent = '👤'; }
+      if (rating) rating.textContent = 'Not selected';
     }
-  } else {
-    if (tileName)   tileName.textContent = 'My Card';
-    if (tileAvatar) tileAvatar.style.display = 'none';
-    if (tileIcon)   { tileIcon.style.display = ''; tileIcon.textContent = '👤'; }
-    if (tileRating) tileRating.textContent = 'Not selected';
   }
+  _setMyCardTile(tileName,  tileAvatar,  tileIcon,  tileRating,  player);
+  _setMyCardTile(tileNameV, tileAvatarV, tileIconV, tileRatingV, player);
 
   // ── Dashboard — async fetch live session count ──
-  var dashSub = document.getElementById('tileSubDashboard');
-  if (dashSub) {
-    dashSub.textContent = 'Loading...';
+  var dashSub  = document.getElementById('tileSubDashboard');
+  var dashSubV = document.getElementById('tileSubDashboardV');
+  if (dashSub || dashSubV) {
+    if (dashSub)  dashSub.textContent  = 'Loading...';
+    if (dashSubV) dashSubV.textContent = 'Loading...';
     try {
       var sessions = (typeof dbGetLiveSessions === 'function') ? await dbGetLiveSessions() : [];
       var count = (sessions || []).length;
-      dashSub.textContent = count > 0
+      var dashText = count > 0
         ? count + ' live session' + (count !== 1 ? 's' : '')
         : 'No live sessions';
+      if (dashSub)  dashSub.textContent  = dashText;
+      if (dashSubV) dashSubV.textContent = dashText;
     } catch(e) {
-      dashSub.textContent = 'Live sessions';
+      if (dashSub)  dashSub.textContent  = 'Live sessions';
+      if (dashSubV) dashSubV.textContent = 'Live sessions';
     }
   }
 }
@@ -420,30 +438,20 @@ function homeLangSelect() {}
 
 /* Called every time home screen opens — show/hide tile, refresh status */
 function homeRefreshJoinClubTile() {
-  var row  = document.getElementById('joinClubTileRow');
-  var sub  = document.getElementById('tileSubJoinClub');
-  if (!row) return;
+  var sub = document.getElementById('tileSubJoinClub');
+  if (!sub) return;
 
-  var isViewer = (typeof appMode === 'undefined') || appMode === null || appMode === 'viewer';
-  if (!isViewer) { row.style.display = 'none'; return; }
-
-  row.style.display = '';
-
-  // Check status and update sub-text
   var club = (typeof getMyClub === 'function') ? getMyClub() : null;
   if (club && club.id && club.name) {
-    if (sub) sub.textContent = '✅ ' + club.name;
+    sub.textContent = '✅ ' + club.name;
     return;
   }
-
-  // Check for pending request
   var pending = localStorage.getItem('kbrr_pending_club_name');
   if (pending) {
-    if (sub) sub.textContent = '⏳ Pending: ' + pending;
+    sub.textContent = '⏳ Pending: ' + pending;
     return;
   }
-
-  if (sub) sub.textContent = 'Find & request';
+  sub.textContent = 'Find & request';
 }
 
 /* ── Join Club Page — initialise when page opens ── */
