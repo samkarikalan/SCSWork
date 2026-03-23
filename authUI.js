@@ -133,8 +133,20 @@ async function authAfterLogin(user) {
     return;
   }
 
-  // Check if already in a club
+  // Check if already in a club — verify player row still exists in DB
   var club = (typeof getMyClub === 'function') ? getMyClub() : { id: null };
+  if (club && club.id) {
+    try {
+      var playerCheck = await sbGet('players',
+        'club_id=eq.' + club.id + '&user_account_id=eq.' + user.id + '&select=nickname');
+      if (!playerCheck || !playerCheck.length) {
+        // Player was removed — clear club from localStorage
+        if (typeof clearMyClub === 'function') clearMyClub();
+        else { localStorage.removeItem('kbrr_my_club_id'); localStorage.removeItem('kbrr_my_club_name'); }
+        club = { id: null };
+      }
+    } catch(e) { /* offline — trust cached state */ }
+  }
   if (club && club.id) {
     // Already in club — go to app
     authHideOverlay();

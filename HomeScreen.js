@@ -469,8 +469,23 @@ async function joinClubPageOpen() {
   var statusCard = document.getElementById('joinClubStatusCard');
   var searchSection = document.getElementById('joinClubSearchSection');
 
-  // Already a member?
+  // Already a member? — verify player row still exists in DB
   var club = (typeof getMyClub === 'function') ? getMyClub() : null;
+  if (club && club.id && club.name) {
+    try {
+      var user = (typeof authGetUser === 'function') ? authGetUser() : null;
+      if (user) {
+        var playerCheck = await sbGet('players',
+          'club_id=eq.' + club.id + '&user_account_id=eq.' + user.id + '&select=nickname');
+        if (!playerCheck || !playerCheck.length) {
+          // Player was removed from club — clear local state
+          if (typeof clearMyClub === 'function') clearMyClub();
+          else { localStorage.removeItem('kbrr_my_club_id'); localStorage.removeItem('kbrr_my_club_name'); }
+          club = null;
+        }
+      }
+    } catch(e) { /* offline — trust cached state */ }
+  }
   if (club && club.id && club.name) {
     _joinClubShowStatus('joined', club.name);
     if (statusCard) statusCard.style.display = '';
