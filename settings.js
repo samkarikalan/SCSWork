@@ -291,8 +291,6 @@ async function playerPlayingRenderList() {
         container.innerHTML = '<p class="player-mgmt-empty">No players currently locked.</p>';
         return;
       }
-      // members IS the players array already — filter directly
-      rows = members.filter(m => m.is_playing);
       rows = await sbGet('players',
         `club_id=eq.${club.id}&is_playing=eq.true&select=nickname,gender,session_id,session_started_at&order=nickname.asc`
       );

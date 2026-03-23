@@ -833,7 +833,7 @@ async function flushLiveSession() {
 
           const updated = [entry, ...otherDays].slice(0, 3);
           await sbPatch("players",
-            `nickname=ilike.${encodeURIComponent(row.player_name)}`, { sessions: updated });
+            `club_id=eq.${club.id}&nickname=ilike.${encodeURIComponent(row.player_name)}`, { sessions: updated });
 
           // Mirror to localStorage
           try {
