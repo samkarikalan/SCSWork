@@ -594,26 +594,34 @@ async function _joinClubDoSearch(query) {
   }).join('');
 }
 
-async function joinClubPageRequest(clubId, clubName) {
+/* ── Stores clubId/Name while user picks a new nickname ── */
+var _pendingJoinClubId   = null;
+var _pendingJoinClubName = null;
+
+async function joinClubPageRequest(clubId, clubName, customNickname) {
   var fbEl      = document.getElementById('joinClubPageFeedback');
   var fbIcon    = document.getElementById('joinClubPageFeedbackIcon');
   var fbTitle   = document.getElementById('joinClubPageFeedbackTitle');
   var fbMsg     = document.getElementById('joinClubPageFeedbackMsg');
   var resultsEl = document.getElementById('joinClubPageResults');
   var errEl     = document.getElementById('joinClubPageError');
+  var nickEl    = document.getElementById('joinClubNicknameSection');
 
   if (errEl) errEl.style.display = 'none';
+  if (nickEl) nickEl.style.display = 'none';
 
   // Show loading
   if (fbEl) {
     if (fbIcon)  fbIcon.textContent  = '⏳';
-    if (fbTitle) fbTitle.textContent = 'Sending request...';
+    if (fbTitle) fbTitle.textContent = 'Checking...';
     if (fbMsg)   fbMsg.textContent   = '';
     fbEl.style.display = '';
   }
   if (resultsEl) resultsEl.style.display = 'none';
 
-  var result = (typeof authRequestJoin === 'function') ? await authRequestJoin(clubId) : { error: 'Not available' };
+  var result = (typeof authRequestJoin === 'function')
+    ? await authRequestJoin(clubId, customNickname)
+    : { error: 'Not available' };
 
   if (result.alreadyMember) {
     _joinClubShowStatus('joined', clubName);
@@ -624,14 +632,27 @@ async function joinClubPageRequest(clubId, clubName) {
     return;
   }
 
+  if (result.nicknameConflict) {
+    // Nickname taken — ask user to pick a different one
+    if (fbEl) fbEl.style.display = 'none';
+    _pendingJoinClubId   = clubId;
+    _pendingJoinClubName = clubName;
+    if (nickEl) {
+      var msgEl  = document.getElementById('joinClubNicknameMsg');
+      var inputEl = document.getElementById('joinClubNicknameInput');
+      if (msgEl)  msgEl.textContent = '"' + result.conflictNickname + '" is already taken in ' + clubName + '. Choose a different nickname for this club:';
+      if (inputEl) inputEl.value = '';
+      nickEl.style.display = '';
+    }
+    return;
+  }
+
   if (result.pending || result.success) {
-    // Save pending state locally
     localStorage.setItem('kbrr_pending_club_id',   clubId);
     localStorage.setItem('kbrr_pending_club_name', clubName);
-
     if (fbIcon)  fbIcon.textContent  = '⏳';
     if (fbTitle) fbTitle.textContent = 'Request Sent!';
-    if (fbMsg)   fbMsg.textContent   = 'Waiting for admin approval for "' + clubName + '". Check back here to see when you\'re approved.';
+    if (fbMsg)   fbMsg.textContent   = 'Waiting for admin approval for "' + clubName + '". Check back here to see when you're approved.';
     homeRefreshJoinClubTile();
     return;
   }
@@ -641,6 +662,18 @@ async function joinClubPageRequest(clubId, clubName) {
     if (resultsEl) resultsEl.style.display = '';
     if (errEl) { errEl.textContent = result.error; errEl.style.display = ''; }
   }
+}
+
+/* ── Called when user submits their chosen nickname ── */
+function joinClubSubmitNickname() {
+  var inputEl = document.getElementById('joinClubNicknameInput');
+  var nickname = inputEl ? inputEl.value.trim() : '';
+  if (!nickname) {
+    var errEl = document.getElementById('joinClubPageError');
+    if (errEl) { errEl.textContent = 'Please enter a nickname.'; errEl.style.display = ''; }
+    return;
+  }
+  joinClubPageRequest(_pendingJoinClubId, _pendingJoinClubName, nickname);
 }
 
 /* ── Leave club ── */

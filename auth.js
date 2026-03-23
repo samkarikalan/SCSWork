@@ -271,16 +271,19 @@ async function authSearchClubs(query) {
 }
 
 /* ── Request to join a club ── */
-async function authRequestJoin(clubId) {
+async function authRequestJoin(clubId, chosenNickname) {
   var user = authGetUser();
   if (!user) return { error: 'Please login first' };
 
+  // Use chosen nickname or fall back to account nickname
+  var nickname = (chosenNickname || user.nickname || '').trim();
+  if (!nickname) return { error: 'Please provide a nickname.' };
+
   try {
-    // Check if already a member
+    // Check if already a member (by user_account_id)
     var members = await sbGet('players',
       'club_id=eq.' + clubId + '&user_account_id=eq.' + user.id + '&select=id');
     if (members && members.length) {
-      // Already member — just set club
       var club = await sbGet('clubs', 'id=eq.' + clubId + '&select=id,name');
       if (club && club.length) setMyClub(club[0].id, club[0].name);
       return { alreadyMember: true };
@@ -291,17 +294,27 @@ async function authRequestJoin(clubId) {
       'club_id=eq.' + clubId + '&user_account_id=eq.' + user.id);
     if (existing && existing.length) {
       var req = existing[0];
-      if (req.status === 'pending') return { pending: true };
+      if (req.status === 'pending') return { pending: true, nickname: req.nickname };
       if (req.status === 'rejected') return { error: 'Your request was rejected by the admin.' };
+      // Previously rejected — allow re-request with new nickname, delete old row
+      await sbDelete('club_join_requests', 'club_id=eq.' + clubId + '&user_account_id=eq.' + user.id);
     }
 
-    // Create request
+    // Check nickname conflict in this club
+    var conflict = await sbGet('players',
+      'club_id=eq.' + clubId + '&nickname=ilike.' + encodeURIComponent(nickname) + '&select=id');
+    if (conflict && conflict.length) {
+      return { nicknameConflict: true, conflictNickname: nickname };
+    }
+
+    // Create request with chosen nickname
     await sbPost('club_join_requests', {
       club_id:         clubId,
       user_account_id: user.id,
+      nickname:        nickname,
       status:          'pending'
     });
-    return { success: true };
+    return { success: true, nickname: nickname };
   } catch(e) {
     return { error: e.message || 'Failed to send request' };
   }
@@ -311,7 +324,7 @@ async function authRequestJoin(clubId) {
 async function authGetJoinRequests(clubId) {
   try {
     var requests = await sbGet('club_join_requests',
-      'club_id=eq.' + clubId + '&status=eq.pending&select=id,user_account_id,requested_at');
+      'club_id=eq.' + clubId + '&status=eq.pending&select=id,user_account_id,nickname,requested_at');
 
     // Get user details for each request
     var result = [];
@@ -326,7 +339,7 @@ async function authGetJoinRequests(clubId) {
             requestedAt:   req.requested_at,
             userAccountId: req.user_account_id,
             userId:        users[0].user_id,
-            nickname:      users[0].nickname,
+            nickname:      req.nickname || users[0].nickname,  // use chosen nickname first
             email:         users[0].email
           });
         }
