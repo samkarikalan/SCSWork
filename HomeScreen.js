@@ -489,7 +489,7 @@ async function joinClubPageOpen() {
         var rows = await sbGet('club_join_requests',
           'club_id=eq.' + pendingId + '&user_account_id=eq.' + user.id + '&select=status');
         if (rows && rows.length) {
-          if (rows[0].status === 'approved') {
+          if (rows[0].status === 'accepted') {
             // Approved — update club
             setMyClub(pendingId, pendingName);
             localStorage.removeItem('kbrr_pending_club_id');

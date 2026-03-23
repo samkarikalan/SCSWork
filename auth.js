@@ -358,10 +358,10 @@ async function authAcceptRequest(requestId, clubId, userAccountId, nickname, gen
     await sbPost('players', {
       user_account_id: userAccountId,
       club_id:         clubId,
-      nickname:        nickname,
+      name:            nickname,
       gender:          gender || 'Male',
       rating:          1.0,
-      club_rating:     1.0,
+      club_ratings:    {},
       wins:            0,
       losses:          0
     });
