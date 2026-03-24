@@ -3,7 +3,7 @@
    Caches app shell for offline use
    ============================================= */
 
-const CACHE_NAME = 'club-scheduler-v15';
+const CACHE_NAME = 'club-scheduler-v17';
 
 const ASSETS = [
   '/SCSWork/KariBRRApp.html',
@@ -12,6 +12,7 @@ const ASSETS = [
   '/SCSWork/BRRStyle3.css',
   '/SCSWork/Export.css',
   '/SCSWork/HomeStyle.css',
+  '/SCSWork/HomeStyle-new.css',
   '/SCSWork/main.js',
   '/SCSWork/HomeScreen.js',
 

@@ -8,6 +8,7 @@ var appMode = null; // 'viewer' | 'organiser'
 function selectMode(mode) {
   appMode = mode;
   sessionStorage.setItem('appMode', mode);
+  localStorage.setItem('kbrr_app_mode', mode);
   // Hide mode select overlay
   var overlay = document.getElementById('modeSelectOverlay');
   if (overlay) overlay.style.display = 'none';
@@ -22,12 +23,15 @@ function applyMode(mode) {
 
   // Body class for organiser scrollable tabs (kept for any CSS that uses it)
   document.body.classList.toggle('organiser-tabs', mode === 'organiser');
+  document.body.classList.toggle('vault-mode',     mode === 'vault');
 
-  // Sync home mode pill buttons
-  var hpv = document.getElementById('homePillViewer');
-  var hpo = document.getElementById('homePillOrganiser');
-  if (hpv) hpv.classList.toggle('active', mode === 'viewer');
-  if (hpo) hpo.classList.toggle('active', mode === 'organiser');
+  // Sync home mode pill buttons (3 modes)
+  var hpv  = document.getElementById('homePillViewer');
+  var hpo  = document.getElementById('homePillOrganiser');
+  var hpvm = document.getElementById('homePillVault');
+  if (hpv)  hpv.classList.toggle('active',  mode === 'viewer');
+  if (hpo)  hpo.classList.toggle('active',  mode === 'organiser');
+  if (hpvm) hpvm.classList.toggle('active', mode === 'vault');
 
   // Apply viewer restrictions
   if (mode === 'viewer') {
@@ -84,28 +88,36 @@ function openModeSwitcher() {
 
   const sheet = document.createElement('div');
   sheet.className = 'mode-switch-sheet';
-  const isViewer = appMode === 'viewer';
   sheet.innerHTML = `
     <div class="mode-sheet-handle"></div>
     <div class="mode-sheet-title">Switch Mode</div>
     <div class="mode-sheet-options">
-      <button class="mode-sheet-btn viewer ${isViewer ? 'active-viewer' : ''}"
+      <button class="mode-sheet-btn viewer ${appMode === 'viewer' ? 'active-viewer' : ''}"
               onclick="switchMode('viewer')">
         <div class="mode-sheet-icon">👁</div>
         <div class="mode-sheet-info">
           <div class="mode-sheet-name">Viewer</div>
           <div class="mode-sheet-desc">Watch live rounds &amp; scores</div>
         </div>
-        ${isViewer ? '<span class="mode-sheet-check">✅</span>' : ''}
+        ${appMode === 'viewer' ? '<span class="mode-sheet-check">✅</span>' : ''}
       </button>
-      <button class="mode-sheet-btn organiser ${!isViewer ? 'active-organiser' : ''}"
+      <button class="mode-sheet-btn organiser ${appMode === 'organiser' ? 'active-organiser' : ''}"
               onclick="switchMode('organiser')">
         <div class="mode-sheet-icon"><img src="win-cup.png" style="width:32px;height:32px;object-fit:contain;filter:drop-shadow(0 1px 4px rgba(0,0,0,0.25))"></div>
         <div class="mode-sheet-info">
-          <div class="mode-sheet-name">Organiser</div>
+          <div class="mode-sheet-name">Round Organiser</div>
           <div class="mode-sheet-desc">Run session, score games, manage players</div>
         </div>
-        ${!isViewer ? '<span class="mode-sheet-check">✅</span>' : ''}
+        ${appMode === 'organiser' ? '<span class="mode-sheet-check">✅</span>' : ''}
+      </button>
+      <button class="mode-sheet-btn vault ${appMode === 'vault' ? 'active-vault' : ''}"
+              onclick="requestVaultMode()">
+        <div class="mode-sheet-icon" style="background:rgba(245,158,11,0.18)">🔑</div>
+        <div class="mode-sheet-info">
+          <div class="mode-sheet-name">Vault Manager</div>
+          <div class="mode-sheet-desc">Club admin — players, requests, management</div>
+        </div>
+        ${appMode === 'vault' ? '<span class="mode-sheet-check">✅</span>' : ''}
       </button>
     </div>
   `;
@@ -120,8 +132,8 @@ function switchMode(mode) {
   if (overlay) overlay.remove();
   appMode = mode;
   sessionStorage.setItem('appMode', mode);
+  localStorage.setItem('kbrr_app_mode', mode);
   applyMode(mode);
-  // Refresh home screen to reflect new mode (flows, stepper, status)
   if (typeof showHomeScreen === 'function') showHomeScreen();
 }
 
@@ -142,7 +154,11 @@ async function initAppFlow() {
 
   // ── Step 2: Check club ──
   var club = (typeof getMyClub === 'function') ? getMyClub() : { id: null };
-  var savedMode = sessionStorage.getItem('appMode') || 'viewer';
+  // Restore last mode — vault requires admin auth
+  var savedMode = localStorage.getItem('kbrr_app_mode') || sessionStorage.getItem('appMode') || 'viewer';
+  if (savedMode === 'vault' && localStorage.getItem('kbrr_club_mode') !== 'admin') {
+    savedMode = 'viewer';
+  }
 
   if (!club || !club.id) {
     // Viewer without a club — go to home so they can use the Join Club tile
@@ -525,6 +541,28 @@ function showPage(pageID, el) {
     if (typeof sbPopulateDeleteDropdown === 'function') sbPopulateDeleteDropdown();
   }
 
+  if (pageID === "vaultPlayingPage") {
+    if (typeof playerPlayingRenderList === 'function') playerPlayingRenderList();
+  }
+
+  if (pageID === "vaultRegisterPage") {
+    if (typeof vaultRenderRegister === 'function') vaultRenderRegister();
+  }
+
+  if (pageID === "vaultModifyPage") {
+    if (typeof vaultRenderModify === 'function') vaultRenderModify();
+  }
+
+  if (pageID === "vaultRequestsPage") {
+    if (typeof vaultLoadRequests === 'function') vaultLoadRequests();
+  }
+
+  if (pageID === "vaultClubMgmtPage") {
+    if (typeof clubLoginRefresh === 'function') clubLoginRefresh();
+    if (typeof viewerLoadClubs === 'function') viewerLoadClubs();
+    if (typeof sbPopulateDeleteDropdown === 'function') sbPopulateDeleteDropdown();
+  }
+
   // Update last visited page
   lastPage = pageID;
 }
@@ -668,6 +706,83 @@ function restoreSyncIndicator() {
   } catch(e) {}
 }
 
+
+
+/* =============================================================
+   VAULT MODE — Admin password gate
+============================================================= */
+function requestVaultMode() {
+  const overlay = document.getElementById('modeSheetOverlay');
+  if (overlay) overlay.remove();
+
+  if (appMode === 'vault') { switchMode('vault'); return; }
+
+  // Already authenticated as admin this session
+  if (localStorage.getItem('kbrr_club_mode') === 'admin') {
+    switchMode('vault');
+    return;
+  }
+  _showVaultPasswordPrompt();
+}
+
+function _showVaultPasswordPrompt() {
+  const existing = document.getElementById('vaultPromptOverlay');
+  if (existing) existing.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'vaultPromptOverlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.6);display:flex;align-items:flex-end;justify-content:center;backdrop-filter:blur(4px)';
+  overlay.innerHTML = `
+    <div class="vault-pw-sheet" id="vaultPwSheet">
+      <div class="mode-sheet-handle"></div>
+      <div class="mode-sheet-title">🔑 Vault Manager</div>
+      <p style="font-size:0.84rem;color:var(--text-dim);margin-bottom:16px;line-height:1.5">
+        Enter the club admin password to access Vault Manager.
+      </p>
+      <input type="password" id="vaultPwInput" class="admin-password-input"
+             placeholder="Admin password"
+             onkeydown="if(event.key==='Enter')verifyVaultPassword()"
+             style="margin-bottom:12px;width:100%">
+      <div id="vaultPwError" style="font-size:0.82rem;color:var(--red);min-height:18px;margin-bottom:12px"></div>
+      <div style="display:flex;gap:10px">
+        <button class="admin-modal-cancel" style="flex:1"
+                onclick="document.getElementById('vaultPromptOverlay').remove()">Cancel</button>
+        <button class="admin-modal-ok" style="flex:1"
+                onclick="verifyVaultPassword()">Enter Vault</button>
+      </div>
+    </div>
+  `;
+  overlay.addEventListener('click', e => { if (e.target === overlay) overlay.remove(); });
+  document.body.appendChild(overlay);
+  document.getElementById('vaultPwSheet').addEventListener('click', e => e.stopPropagation());
+  setTimeout(() => document.getElementById('vaultPwInput')?.focus(), 100);
+}
+
+async function verifyVaultPassword() {
+  const input = document.getElementById('vaultPwInput');
+  const errEl = document.getElementById('vaultPwError');
+  const pw    = (input ? input.value : '').trim();
+  if (!pw) { if (errEl) errEl.textContent = 'Enter the admin password'; return; }
+
+  const club = (typeof getMyClub === 'function') ? getMyClub() : null;
+  if (!club || !club.id) { if (errEl) errEl.textContent = 'No club selected'; return; }
+
+  if (errEl) errEl.textContent = 'Checking...';
+  try {
+    const rows = await sbGet('clubs', `id=eq.${club.id}&select=admin_password`);
+    if (!rows || !rows.length || rows[0].admin_password !== pw) {
+      if (errEl) errEl.textContent = 'Wrong admin password';
+      if (input) input.value = '';
+      return;
+    }
+    localStorage.setItem('kbrr_club_mode', 'admin');
+    const ov = document.getElementById('vaultPromptOverlay');
+    if (ov) ov.remove();
+    switchMode('vault');
+  } catch(e) {
+    if (errEl) errEl.textContent = 'Error: ' + e.message;
+  }
+}
 
 /* =============================================================
    POWER BUTTON — End Session

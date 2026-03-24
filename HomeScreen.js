@@ -70,6 +70,7 @@ function showHomeScreen() {
 
   // Mode + status bar
   var isOrganiser = (typeof appMode !== 'undefined') && appMode === 'organiser';
+  var isVault     = (typeof appMode !== 'undefined') && appMode === 'vault';
   var statusBar  = document.getElementById('homeStatusBar');
   var statusName = document.getElementById('homeStatusName');
   var club   = (typeof getMyClub   === 'function') ? getMyClub()   : null;
@@ -77,7 +78,8 @@ function showHomeScreen() {
   var isAdmin = (typeof isClubAdmin === 'function') ? isClubAdmin() : false;
 
   if (club && club.name) {
-    if (statusName) statusName.textContent = (isAdmin ? '★ ' : '') + club.name;
+    var modePrefix = isVault ? '🔑 ' : (isAdmin ? '★ ' : '');
+    if (statusName) statusName.textContent = modePrefix + club.name;
     if (statusBar)  statusBar.classList.remove('disconnected');
   } else if (player && player.displayName) {
     if (statusName) statusName.textContent = player.displayName;
@@ -87,16 +89,21 @@ function showHomeScreen() {
     if (statusBar)  statusBar.classList.add('disconnected');
   }
 
-  // Show correct flow and grids
+  // Show correct flow and grids (3 modes: viewer / organiser / vault)
+  var isVault   = (typeof appMode !== 'undefined') && appMode === 'vault';
+  var isViewer  = !isOrganiser && !isVault;
+
   var orgFlow    = document.getElementById('homeOrganizerFlow');
   var viewFlow   = document.getElementById('homeViewerFlow');
   var orgGrid    = document.getElementById('homeOrgGrid');
   var viewerGrid = document.getElementById('homeViewerGrid');
+  var vaultGrid  = document.getElementById('homeVaultGrid');
 
   if (orgFlow)    orgFlow.style.display    = isOrganiser ? '' : 'none';
-  if (viewFlow)   viewFlow.style.display   = isOrganiser ? 'none' : '';
+  if (viewFlow)   viewFlow.style.display   = isViewer    ? '' : 'none';
   if (orgGrid)    orgGrid.style.display    = isOrganiser ? '' : 'none';
-  if (viewerGrid) viewerGrid.style.display = isOrganiser ? 'none' : '';
+  if (viewerGrid) viewerGrid.style.display = isViewer    ? '' : 'none';
+  if (vaultGrid)  vaultGrid.style.display  = isVault     ? '' : 'none';
 
   if (isOrganiser) homeUpdateStepper();
   homeRefreshSummaryTile();

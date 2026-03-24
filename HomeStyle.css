@@ -1513,3 +1513,70 @@ body.app-light .tile-pairs { background: rgba(245,158,11,0.12); }
   padding: 7px 12px;
   cursor: pointer;
 }
+
+
+/* =============================================
+   VAULT MANAGER MODE — 3rd mode styles
+   ============================================= */
+
+/* Vault mode select button */
+.mode-select-btn.vault {
+  border-color: rgba(245,158,11,0.3);
+}
+.mode-select-btn.vault::before {
+  background: rgba(245,158,11,0.07);
+}
+.mode-select-btn.vault .mode-select-btn-icon {
+  background: rgba(245,158,11,0.15);
+}
+.mode-select-btn.vault .mode-select-btn-name {
+  color: var(--amber);
+}
+
+/* Mode switch sheet — vault button */
+.mode-sheet-btn.vault {
+  border-color: rgba(245,158,11,0.3);
+}
+.mode-sheet-btn.active-vault {
+  border-color: rgba(245,158,11,0.45);
+  background: rgba(245,158,11,0.1);
+}
+.mode-sheet-btn.active-vault .mode-sheet-name {
+  color: var(--amber);
+}
+
+/* Vault pill button */
+#homePillVault.active {
+  background: var(--amber);
+  color: #000;
+}
+
+/* Status bar amber accent in vault mode */
+body.vault-mode #homeStatusBar {
+  border-color: rgba(245,158,11,0.3);
+}
+body.vault-mode .home-status-dot {
+  background: var(--amber);
+  box-shadow: 0 0 8px var(--amber);
+  animation: none;
+}
+body.vault-mode .home-status-role {
+  background: rgba(245,158,11,0.15);
+  border-color: rgba(245,158,11,0.3);
+  color: var(--amber);
+}
+
+/* Vault password bottom sheet */
+.vault-pw-sheet {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 22px 22px 0 0;
+  padding: 8px 20px 40px;
+  width: 100%;
+  max-width: 480px;
+  animation: slideUp 0.22s cubic-bezier(.4,0,.2,1);
+}
+
+/* Vault grid tile colours */
+.tile-pairs { background: rgba(45,206,137,0.15); }
+body.app-light .tile-pairs { background: rgba(45,206,137,0.12); }
