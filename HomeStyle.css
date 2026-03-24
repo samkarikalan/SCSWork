@@ -1580,3 +1580,41 @@ body.vault-mode .home-status-role {
 /* Vault grid tile colours */
 .tile-pairs { background: rgba(45,206,137,0.15); }
 body.app-light .tile-pairs { background: rgba(45,206,137,0.12); }
+
+/* ── Club Setup Sheet ── */
+.club-setup-sheet {
+  background: var(--surface);
+  border: 1px solid var(--border2);
+  border-radius: 22px 22px 0 0;
+  padding: 8px 20px 40px;
+  width: 100%;
+  max-width: 480px;
+  animation: slideUp 0.22s cubic-bezier(.4,0,.2,1);
+  max-height: 90vh;
+  overflow-y: auto;
+}
+.club-setup-tabs {
+  display: flex;
+  gap: 8px;
+  background: var(--bg);
+  border-radius: 12px;
+  padding: 4px;
+}
+.club-setup-tab {
+  flex: 1;
+  padding: 9px 0;
+  border-radius: 9px;
+  border: none;
+  background: transparent;
+  font-family: var(--font-body);
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.18s;
+}
+.club-setup-tab.active {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.18);
+}

@@ -50,7 +50,7 @@
       <div class="mode-select-title">Choose Mode</div>
       <div class="mode-select-subtitle">How are you using the app today?</div>
       <div class="mode-select-options">
-        <button class="mode-select-btn viewer" onclick="selectMode('viewer')">
+        <button class="mode-select-btn viewer" onclick="document.getElementById('modeSelectOverlay').style.display='none';selectMode('viewer')">
           <span class="mode-select-btn-icon">👁</span>
           <div class="mode-select-btn-info">
             <div class="mode-select-btn-name">Viewer</div>
@@ -58,7 +58,7 @@
           </div>
           <span class="mode-select-btn-arrow">›</span>
         </button>
-        <button class="mode-select-btn organiser" onclick="selectMode('organiser')">
+        <button class="mode-select-btn organiser" onclick="document.getElementById('modeSelectOverlay').style.display='none';switchMode('organiser')">
           <span class="mode-select-btn-icon">🏆</span>
           <div class="mode-select-btn-info">
             <div class="mode-select-btn-name">Round Organiser</div>
@@ -66,7 +66,7 @@
           </div>
           <span class="mode-select-btn-arrow">›</span>
         </button>
-        <button class="mode-select-btn vault" onclick="requestVaultMode()">
+        <button class="mode-select-btn vault" onclick="document.getElementById('modeSelectOverlay').style.display='none';requestVaultMode()">
           <span class="mode-select-btn-icon">🔑</span>
           <div class="mode-select-btn-info">
             <div class="mode-select-btn-name">Vault Manager</div>
